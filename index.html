@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clever Research</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #ffffff;
+  --bg2: #f7f7f5;
+  --bg3: #f0efe9;
+  --text: #1a1a1a;
+  --text2: #555;
+  --text3: #999;
+  --border: rgba(0,0,0,0.1);
+  --border2: rgba(0,0,0,0.18);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --blue-bg: #e8f0fe;
+  --blue-text: #1a56db;
+  --blue-border: #c3d4f8;
+  --green-bg: #e6f4ea;
+  --green-text: #1e7e34;
+  --green-border: #a8d5b5;
+  --amber-bg: #fff8e1;
+  --amber-text: #b45309;
+  --amber-border: #fcd34d;
+  --red-bg: #fef2f2;
+  --red-text: #b91c1c;
+  --red-border: #fca5a5;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e; --bg2: #2c2c2e; --bg3: #3a3a3c;
+    --text: #f5f5f5; --text2: #aaa; --text3: #666;
+    --border: rgba(255,255,255,0.08); --border2: rgba(255,255,255,0.15);
+    --blue-bg: #1e2a4a; --blue-text: #93b4f8; --blue-border: #2d4080;
+    --green-bg: #1a2e1e; --green-text: #6fcf97; --green-border: #2d5535;
+    --amber-bg: #2e2010; --amber-text: #fbbf24; --amber-border: #78450f;
+    --red-bg: #2e1010; --red-text: #f87171; --red-border: #7f1d1d;
+  }
+}
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg3); color: var(--text); min-height: 100vh; }
+.app { max-width: 820px; margin: 0 auto; padding: 2rem 1rem; }
+.header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 2rem; }
+.header h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.5px; }
+.header h1 span { color: var(--text3); font-weight: 400; }
+.admin-toggle { font-size: 13px; color: var(--text3); background: none; border: 1px solid var(--border); cursor: pointer; padding: 5px 12px; border-radius: 20px; transition: all 0.15s; }
+.admin-toggle:hover { color: var(--text); border-color: var(--border2); background: var(--bg2); }
+
+.search-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.search-box { display: flex; gap: 8px; }
+.search-box input { flex: 1; padding: 10px 14px; font-size: 15px; border: 1px solid var(--border2); border-radius: var(--radius-sm); background: var(--bg2); color: var(--text); outline: none; font-family: inherit; }
+.search-box input:focus { border-color: var(--blue-text); background: var(--bg); box-shadow: 0 0 0 3px var(--blue-bg); }
+.search-box input::placeholder { color: var(--text3); }
+.search-btn { padding: 10px 20px; font-size: 14px; font-weight: 500; border: none; border-radius: var(--radius-sm); background: var(--text); color: var(--bg); cursor: pointer; font-family: inherit; transition: opacity 0.15s; white-space: nowrap; }
+.search-btn:hover { opacity: 0.85; }
+.search-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.stats-row { display: flex; gap: 1rem; margin-bottom: 1rem; font-size: 13px; color: var(--text3); }
+.stats-row strong { color: var(--text2); }
+
+.results-area { min-height: 120px; }
+.result-card { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.result-finding { font-size: 15px; font-weight: 500; line-height: 1.4; margin-bottom: 6px; }
+.result-context { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 10px; }
+.result-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 11px; padding: 2px 8px; border-radius: 20px; white-space: nowrap; }
+.tag-study { background: var(--bg2); color: var(--text2); border: 1px solid var(--border); font-weight: 500; }
+.tag-series { background: var(--blue-bg); color: var(--blue-text); border: 1px solid var(--blue-border); }
+.tag-date { background: var(--bg2); color: var(--text3); border: 1px solid var(--border); }
+.tag-audience { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border); }
+.tag-gen { background: var(--amber-bg); color: var(--amber-text); border: 1px solid var(--amber-border); }
+
+.placeholder { text-align: center; padding: 3rem 1rem; color: var(--text3); }
+.placeholder p { margin-bottom: 6px; font-size: 14px; }
+.loading { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 3rem; color: var(--text3); font-size: 14px; }
+.dots { display: flex; gap: 4px; }
+.dots span { width: 6px; height: 6px; border-radius: 50%; background: var(--text3); animation: bounce 1.2s infinite; }
+.dots span:nth-child(2) { animation-delay: 0.2s; }
+.dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes bounce { 0%,80%,100% { transform: scale(0.6); opacity: 0.3; } 40% { transform: scale(1); opacity: 1; } }
+
+.admin-panel { background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+.admin-panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 1.25rem; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; font-size: 11px; }
+.msg { padding: 8px 12px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; }
+.msg.success { background: var(--green-bg); color: var(--green-text); border: 1px solid var(--green-border); }
+.msg.error { background: var(--red-bg); color: var(--red-text); border: 1px solid var(--red-border); }
+
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group.full { grid-column: 1 / -1; }
+.form-group label { font-size: 12px; font-weight: 500; color: var(--text2); }
+.form-group input, .form-group select, .form-group textarea {
+  padding: 8px 10px; font-size: 13px; border: 1px solid var(--border2);
+  border-radius: var(--radius-sm); background: var(--bg2); color: var(--text);
+  outline: none; font-family: inherit; transition: border-color 0.15s, box-shadow 0.15s;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  border-color: var(--blue-text); box-shadow: 0 0 0 3px var(--blue-bg); background: var(--bg);
+}
+.form-group textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+.tags-section { margin-bottom: 14px; }
+.tags-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 7px; }
+.tags-grid { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag-check { font-size: 12px; cursor: pointer; padding: 4px 10px; border: 1px solid var(--border2); border-radius: 20px; background: var(--bg2); color: var(--text2); user-select: none; transition: all 0.1s; }
+.tag-check:hover { border-color: var(--blue-text); }
+.tag-check.checked { background: var(--blue-bg); color: var(--blue-text); border-color: var(--blue-border); }
+.tag-check input { display: none; }
+
+.file-drop { border: 1.5px dashed var(--border2); border-radius: var(--radius-sm); padding: 1.25rem; text-align: center; cursor: pointer; font-size: 13px; color: var(--text3); margin-bottom: 10px; transition: all 0.15s; }
+.file-drop:hover { border-color: var(--blue-text); color: var(--text2); background: var(--blue-bg); }
+.file-drop.has-file { border-color: var(--green-text); color: var(--green-text); background: var(--green-bg); border-style: solid; }
+.parsed-preview { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px; font-size: 12px; color: var(--text2); line-height: 1.7; }
+.parsed-preview strong { color: var(--text); }
+
+.submit-btn { width: 100%; padding: 11px; font-size: 14px; font-weight: 500; border: none; border-radius: var(--radius-sm); background: var(--text); color: var(--bg); cursor: pointer; font-family: inherit; transition: opacity 0.15s; }
+.submit-btn:hover { opacity: 0.85; }
+.submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.divider { height: 1px; background: var(--border); margin: 1.5rem 0; }
+.studies-header { font-size: 12px; font-weight: 500; color: var(--text3); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+.study-item { display: flex; align-items: flex-start; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--border); gap: 12px; }
+.study-item:last-child { border-bottom: none; }
+.study-name { font-size: 13px; font-weight: 500; }
+.study-series-badge { font-size: 10px; padding: 1px 6px; border-radius: 20px; background: var(--amber-bg); color: var(--amber-text); border: 1px solid var(--amber-border); margin-left: 6px; vertical-align: middle; }
+.study-meta { font-size: 12px; color: var(--text3); margin-top: 2px; }
+.remove-btn { font-size: 11px; color: var(--text3); background: none; border: none; cursor: pointer; padding: 2px 6px; white-space: nowrap; border-radius: var(--radius-sm); }
+.remove-btn:hover { color: var(--red-text); background: var(--red-bg); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>Clever Research <span>repository</span></h1>
+    <button class="admin-toggle" id="adminToggle">+ add study</button>
+  </div>
+
+  <div id="adminPanel" class="admin-panel" style="display:none;">
+    <h2>Add study</h2>
+    <div id="adminMsg"></div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Study name</label>
+        <input type="text" id="studyName" placeholder="2026 Mortgage Rate Forecast" />
+      </div>
+      <div class="form-group">
+        <label>Publish date</label>
+        <input type="date" id="studyDate" />
+      </div>
+      <div class="form-group">
+        <label>Topic category</label>
+        <select id="studyTopic">
+          <option value="">Select...</option>
+          <option>Housing market</option>
+          <option>Personal finance</option>
+          <option>Mortgage &amp; rates</option>
+          <option>Renting</option>
+          <option>City rankings</option>
+          <option>Real estate agents</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Series (if repeat study)</label>
+        <input type="text" id="studySeries" placeholder="e.g. Mortgage Rate Forecast" />
+      </div>
+      <div class="form-group full">
+        <label>Source URL</label>
+        <input type="text" id="studyUrl" placeholder="https://..." />
+      </div>
+    </div>
+
+    <div class="tags-section">
+      <div class="tags-label">Audience / persona</div>
+      <div class="tags-grid" id="audienceTags">
+        <label class="tag-check"><input type="checkbox" value="Home buyers" />Home buyers</label>
+        <label class="tag-check"><input type="checkbox" value="Home sellers" />Home sellers</label>
+        <label class="tag-check"><input type="checkbox" value="Renters" />Renters</label>
+        <label class="tag-check"><input type="checkbox" value="Real estate agents" />Real estate agents</label>
+        <label class="tag-check"><input type="checkbox" value="People in debt" />People in debt</label>
+        <label class="tag-check"><input type="checkbox" value="Homeowners" />Homeowners</label>
+        <label class="tag-check"><input type="checkbox" value="First-time buyers" />First-time buyers</label>
+        <label class="tag-check"><input type="checkbox" value="Investors" />Investors</label>
+        <label class="tag-check"><input type="checkbox" value="General consumers" />General consumers</label>
+      </div>
+    </div>
+
+    <div class="tags-section">
+      <div class="tags-label">Generational tags</div>
+      <div class="tags-grid" id="genTags">
+        <label class="tag-check"><input type="checkbox" value="Gen Z" />Gen Z</label>
+        <label class="tag-check"><input type="checkbox" value="Millennials" />Millennials</label>
+        <label class="tag-check"><input type="checkbox" value="Gen X" />Gen X</label>
+        <label class="tag-check"><input type="checkbox" value="Boomers" />Boomers</label>
+        <label class="tag-check"><input type="checkbox" value="Cross-generational" />Cross-generational</label>
+      </div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Upload Pollfish Excel file (optional)</label>
+      <div class="file-drop" id="fileDrop">Click to upload .xlsx file</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;" />
+      <div id="parsedPreview" style="display:none;" class="parsed-preview"></div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>Key takeaways (one per line, 3–5 recommended)</label>
+      <textarea id="studyTakeaways" placeholder="e.g. 64% of prospective buyers say mortgage rates have already delayed their plans&#10;Only 18% expect rates to fall below 6% in 2026"></textarea>
+    </div>
+
+    <button class="submit-btn" id="submitBtn">Save study to repository</button>
+
+    <div id="studiesList"></div>
+  </div>
+
+  <div class="search-card">
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search findings... e.g. how do millennials feel about mortgage rates?" />
+      <button class="search-btn" id="searchBtn">Search</button>
+    </div>
+  </div>
+
+  <div id="statsRow" class="stats-row" style="display:none;">
+    <span><strong id="statStudies">0</strong> studies</span>
+    <span><strong id="statQuestions">0</strong> question tables</span>
+  </div>
+
+  <div class="results-area" id="resultsArea">
+    <div class="placeholder">
+      <p>Repository is empty.</p>
+      <p>Use "+ add study" to upload your first Pollfish study.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+var parsedData = null;
+var isSearching = false;
+
+function showMsg(text, type) {
+  var el = document.getElementById('adminMsg');
+  el.innerHTML = '<div class="msg ' + type + '">' + text + '</div>';
+  if (type === 'success') setTimeout(function() { el.innerHTML = ''; }, 4000);
+}
+
+function getCheckedTags(id) {
+  return Array.from(document.querySelectorAll('#' + id + ' input:checked')).map(function(cb) { return cb.value; });
+}
+
+async function fetchStudies() {
+  var res = await fetch('/api/studies');
+  return res.json();
+}
+
+async function updateStats() {
+  var studies = await fetchStudies();
+  var row = document.getElementById('statsRow');
+  var resultsArea = document.getElementById('resultsArea');
+  if (!studies.length) {
+    row.style.display = 'none';
+    resultsArea.innerHTML = '<div class="placeholder"><p>Repository is empty.</p><p>Use "+ add study" to upload your first Pollfish study.</p></div>';
+    return;
+  }
+  row.style.display = 'flex';
+  document.getElementById('statStudies').textContent = studies.length;
+  var totalQ = studies.reduce(function(a, s) { return a + (s.questions ? s.questions.length : 0); }, 0);
+  document.getElementById('statQuestions').textContent = totalQ;
+  if (resultsArea.querySelector('.placeholder')) {
+    resultsArea.innerHTML = '<div class="placeholder"><p>Repository ready — ' + studies.length + ' ' + (studies.length === 1 ? 'study' : 'studies') + ' loaded.</p><p>Type a question above to search.</p></div>';
+  }
+}
+
+async function refreshStudiesList() {
+  var studies = await fetchStudies();
+  var container = document.getElementById('studiesList');
+  if (!studies.length) { container.innerHTML = ''; return; }
+  var html = '<div class="divider"></div><div class="studies-header">In repository (' + studies.length + ')</div>';
+  studies.forEach(function(s) {
+    html += '<div class="study-item">' +
+      '<div><div class="study-name">' + s.name + (s.series ? '<span class="study-series-badge">' + s.series + '</span>' : '') + '</div>' +
+      '<div class="study-meta">' + (s.date || 'No date') + ' · ' + (s.topic || 'No topic') + ' · ' + (s.questions ? s.questions.length : 0) + ' tables</div></div>' +
+      '<button class="remove-btn" data-id="' + s.id + '">remove</button></div>';
+  });
+  container.innerHTML = html;
+  container.querySelectorAll('.remove-btn').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      var id = this.getAttribute('data-id');
+      await fetch('/api/studies?id=' + id, { method: 'DELETE' });
+      refreshStudiesList();
+      updateStats();
+    });
+  });
+}
+
+document.getElementById('adminToggle').addEventListener('click', function() {
+  var panel = document.getElementById('adminPanel');
+  var btn = document.getElementById('adminToggle');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'block';
+    btn.textContent = 'close';
+    refreshStudiesList();
+  } else {
+    panel.style.display = 'none';
+    btn.textContent = '+ add study';
+  }
+});
+
+document.querySelectorAll('.tag-check').forEach(function(label) {
+  label.addEventListener('click', function() {
+    var cb = label.querySelector('input');
+    cb.checked = !cb.checked;
+    label.classList.toggle('checked', cb.checked);
+  });
+});
+
+document.getElementById('fileDrop').addEventListener('click', function() {
+  document.getElementById('fileInput').click();
+});
+
+document.getElementById('fileInput').addEventListener('change', function() {
+  var file = this.files[0];
+  if (!file) return;
+  var drop = document.getElementById('fileDrop');
+  drop.textContent = 'Reading ' + file.name + '...';
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var wb = XLSX.read(e.target.result, { type: 'array' });
+      var qSheets = wb.SheetNames.filter(function(n) { return /^[S]?Q\d+$/.test(n); });
+      parsedData = { questions: [] };
+      qSheets.forEach(function(name) {
+        var ws = wb.Sheets[name];
+        var json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        var questionText = json[0] && json[0][0] ? String(json[0][0]).trim() : name;
+        var rows = json.slice(1).filter(function(r) { return r.some(function(c) { return c !== ''; }); });
+        parsedData.questions.push({ name: name, question: questionText, rows: rows });
+      });
+      drop.textContent = file.name + ' — ' + qSheets.length + ' question tables found';
+      drop.classList.add('has-file');
+      var preview = document.getElementById('parsedPreview');
+      preview.style.display = 'block';
+      preview.innerHTML = '<strong>Detected tables:</strong>' + parsedData.questions.map(function(q) {
+        return '<br>' + q.name + ': ' + q.question.substring(0, 70) + (q.question.length > 70 ? '...' : '');
+      }).join('');
+    } catch(err) {
+      drop.textContent = 'Error reading file: ' + err.message;
+      parsedData = null;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+document.getElementById('submitBtn').addEventListener('click', async function() {
+  var name = document.getElementById('studyName').value.trim();
+  if (!name) { showMsg('Study name is required.', 'error'); return; }
+  var btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    var study = {
+      name: name,
+      date: document.getElementById('studyDate').value,
+      topic: document.getElementById('studyTopic').value,
+      series: document.getElementById('studySeries').value.trim(),
+      url: document.getElementById('studyUrl').value.trim(),
+      audience: getCheckedTags('audienceTags'),
+      generations: getCheckedTags('genTags'),
+      takeaways: document.getElementById('studyTakeaways').value.trim().split('\n').filter(function(t) { return t.trim(); }),
+      questions: parsedData ? parsedData.questions : []
+    };
+    var res = await fetch('/api/studies', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(study)
+    });
+    if (!res.ok) throw new Error('Server error ' + res.status);
+    showMsg('Study "' + name + '" saved to repository.', 'success');
+    resetForm();
+    refreshStudiesList();
+    updateStats();
+  } catch(e) {
+    showMsg('Save failed: ' + e.message, 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save study to repository';
+});
+
+function resetForm() {
+  ['studyName','studyDate','studyTopic','studySeries','studyUrl','studyTakeaways'].forEach(function(id) { document.getElementById(id).value = ''; });
+  document.querySelectorAll('.tag-check input').forEach(function(cb) { cb.checked = false; });
+  document.querySelectorAll('.tag-check').forEach(function(l) { l.classList.remove('checked'); });
+  document.getElementById('fileDrop').textContent = 'Click to upload .xlsx file';
+  document.getElementById('fileDrop').classList.remove('has-file');
+  document.getElementById('parsedPreview').style.display = 'none';
+  document.getElementById('fileInput').value = '';
+  parsedData = null;
+}
+
+document.getElementById('searchInput').addEventListener('keydown', function(e) { if (e.key === 'Enter') doSearch(); });
+document.getElementById('searchBtn').addEventListener('click', doSearch);
+
+async function doSearch() {
+  if (isSearching) return;
+  var query = document.getElementById('searchInput').value.trim();
+  if (!query) return;
+  var studies = await fetchStudies();
+  var resultsArea = document.getElementById('resultsArea');
+  if (!studies.length) {
+    resultsArea.innerHTML = '<div class="placeholder"><p>No studies in the repository yet.</p></div>';
+    return;
+  }
+  isSearching = true;
+  document.getElementById('searchBtn').disabled = true;
+  resultsArea.innerHTML = '<div class="loading"><div class="dots"><span></span><span></span><span></span></div> Searching ' + studies.length + ' ' + (studies.length === 1 ? 'study' : 'studies') + '...</div>';
+  try {
+    var res = await fetch('/api/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: query, studies: studies })
+    });
+    var results = await res.json();
+    if (!Array.isArray(results) || !results.length) {
+      resultsArea.innerHTML = '<div class="placeholder"><p>No relevant findings for that query.</p><p>Try different keywords or add more studies.</p></div>';
+    } else {
+      resultsArea.innerHTML = results.map(function(r) {
+        var tags = '<span class="tag tag-study">' + r.study + '</span>';
+        if (r.series) tags += '<span class="tag tag-series">' + r.series + '</span>';
+        if (r.date) tags += '<span class="tag tag-date">' + r.date + '</span>';
+        if (r.audience) r.audience.forEach(function(a) { tags += '<span class="tag tag-audience">' + a + '</span>'; });
+        if (r.generations) r.generations.forEach(function(g) { tags += '<span class="tag tag-gen">' + g + '</span>'; });
+        return '<div class="result-card"><div class="result-finding">' + r.finding + '</div><div class="result-context">' + r.context + '</div><div class="result-meta">' + tags + '</div></div>';
+      }).join('');
+    }
+  } catch(e) {
+    resultsArea.innerHTML = '<div class="placeholder"><p>Search error: ' + e.message + '</p></div>';
+  }
+  isSearching = false;
+  document.getElementById('searchBtn').disabled = false;
+}
+
+updateStats();
+</script>
+</body>
+</html>
