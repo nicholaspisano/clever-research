@@ -1,29 +1,25 @@
-const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
+import { put, list, get } from '@vercel/blob';
+
+const FILE = 'studies.json';
 
 async function getStudies() {
   try {
-    const listRes = await fetch('https://blob.vercel-storage.com?prefix=studies.json&limit=1', {
-      headers: { Authorization: `Bearer ${BLOB_TOKEN}` }
-    });
-    const listData = await listRes.json();
-    if (!listData.blobs || !listData.blobs.length) return [];
-    const fileRes = await fetch(listData.blobs[0].url);
-    const data = await fileRes.json();
+    const { blobs } = await list({ prefix: FILE, token: process.env.BLOB_READ_WRITE_TOKEN });
+    if (!blobs.length) return [];
+    const res = await fetch(blobs[0].url);
+    const data = await res.json();
     return Array.isArray(data) ? data : [];
-  } catch (e) { return []; }
+  } catch (e) {
+    return [];
+  }
 }
 
 async function saveStudies(studies) {
-  await fetch('https://blob.vercel-storage.com/studies.json', {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${BLOB_TOKEN}`,
-      'x-api-version': '7',
-      'x-content-type': 'application/json',
-      'x-add-random-suffix': '0',
-      'x-cache-control-max-age': '0'
-    },
-    body: JSON.stringify(studies)
+  await put(FILE, JSON.stringify(studies), {
+    access: 'public',
+    addRandomSuffix: false,
+    token: process.env.BLOB_READ_WRITE_TOKEN,
+    cacheControlMaxAge: 0
   });
 }
 
